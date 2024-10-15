@@ -11,7 +11,7 @@ import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger }
 import { useTheme } from 'next-themes'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Badge } from "@/components/ui/badge"
-import { toast } from "@/components/ui/use-toast"
+import { useToast } from "@/components/ui/use-toast"
 
 const API_URL = 'http://localhost:3001/api/internet-speeds';
 
@@ -44,6 +44,7 @@ const useInternetSpeedData = () => {
   const [lastUpdated, setLastUpdated] = useState<Date | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
+  const { toast } = useToast()
 
   const fetchDataAndUpdate = useCallback(async () => {
     try {
@@ -63,7 +64,7 @@ const useInternetSpeedData = () => {
     } finally {
       setIsLoading(false)
     }
-  }, [])
+  }, [toast])
 
   useEffect(() => {
     fetchDataAndUpdate()
@@ -305,8 +306,9 @@ export function InternetSpeedRankingComponent() {
                       {data.map((item, index) => (
                         <TableRow key={item.tile}>
                           <TableCell>{index + 1}</TableCell>
+                          
                           <TableCell>{item.tile}</TableCell>
-                          <TableCell  className="text-right">{item.avgDownloadSpeed.toFixed(2)}</TableCell>
+                          <TableCell className="text-right">{item.avgDownloadSpeed.toFixed(2)}</TableCell>
                           <TableCell className="text-right">{item.avgUploadSpeed.toFixed(2)}</TableCell>
                           <TableCell className="text-right">{item.avgLatency.toFixed(2)}</TableCell>
                           <TableCell className="text-right">{item.tests.toLocaleString()}</TableCell>
