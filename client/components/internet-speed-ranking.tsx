@@ -4,8 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { CheckCircle2, AlertCircle, Clock, RefreshCw, InfoIcon, Moon, Sun } from 'lucide-react'
+import { CheckCircle2, AlertCircle, Clock, InfoIcon, Moon, Sun } from 'lucide-react'
 import Link from 'next/link'
 import { Tooltip as UITooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { useTheme } from 'next-themes'
@@ -14,6 +13,7 @@ import { Badge } from "@/components/ui/badge"
 import { useToast } from "@/components/ui/use-toast"
 
 const API_URL = 'http://localhost:3001/api/internet-speeds';
+const REFRESH_INTERVAL = 5 * 60 * 1000; // 5 minutes in milliseconds
 
 interface SpeedData {
   tile: string;
@@ -68,9 +68,11 @@ const useInternetSpeedData = () => {
 
   useEffect(() => {
     fetchDataAndUpdate()
+    const intervalId = setInterval(fetchDataAndUpdate, REFRESH_INTERVAL)
+    return () => clearInterval(intervalId)
   }, [fetchDataAndUpdate])
 
-  return { data, lastUpdated, isLoading, error, refreshData: fetchDataAndUpdate }
+  return { data, lastUpdated, isLoading, error }
 }
 
 const DataFreshnessIndicator = ({ lastUpdated }: { lastUpdated: Date }) => {
@@ -136,21 +138,19 @@ const ThemeToggle = () => {
   const { theme, setTheme } = useTheme()
 
   return (
-    <Button
-      variant="ghost"
-      size="icon"
+    <button
       onClick={() => setTheme(theme === 'light' ? 'dark' : 'light')}
-      className="w-9 px-0"
+      className="w-10 h-10 p-2 rounded-full bg-gray-200 dark:bg-gray-800 flex items-center justify-center"
     >
       <Sun className="h-[1.2rem] w-[1.2rem] rotate-0 scale-100 transition-all dark:-rotate-90 dark:scale-0" />
       <Moon className="absolute h-[1.2rem] w-[1.2rem] rotate-90 scale-0 transition-all dark:rotate-0 dark:scale-100" />
       <span className="sr-only">Toggle theme</span>
-    </Button>
+    </button>
   )
 }
 
 export function InternetSpeedRankingComponent() {
-  const { data, lastUpdated, isLoading, error, refreshData } = useInternetSpeedData()
+  const { data, lastUpdated, isLoading, error } = useInternetSpeedData()
   const [activeTab, setActiveTab] = useState('download')
 
   if (error) {
@@ -158,9 +158,6 @@ export function InternetSpeedRankingComponent() {
       <div className="flex flex-col items-center justify-center h-screen text-red-500 dark:text-red-400">
         <h2 className="text-2xl font-bold mb-4">Error</h2>
         <p>{error}</p>
-        <Button onClick={refreshData} className="mt-4">
-          Try Again
-        </Button>
       </div>
     )
   }
@@ -202,10 +199,9 @@ export function InternetSpeedRankingComponent() {
               </UITooltip>
             </TooltipProvider>
           </div>
-          <Button onClick={refreshData} disabled={isLoading}>
-            <RefreshCw className="mr-2 h-4 w-4" />
-            {isLoading ? 'Refreshing...' : 'Refresh Data'}
-          </Button>
+          <p className="text-sm text-gray-500 dark:text-gray-400">
+            Data refreshes automatically every 5 minutes
+          </p>
         </div>
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           <Card className="lg:col-span-1">
