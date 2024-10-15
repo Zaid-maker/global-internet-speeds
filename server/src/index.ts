@@ -4,6 +4,10 @@ import fs from "fs";
 import path from "path";
 import csv from "csv-parser";
 import winston from "winston";
+import axios from "axios";
+import dotenv from "dotenv";
+
+dotenv.config();
 
 const app = express();
 const port = process.env.PORT || 3001;
@@ -42,6 +46,26 @@ if (process.env.NODE_ENV !== "production") {
       format: winston.format.simple(),
     })
   );
+}
+
+// Discord webhook URL (you should set this in your .env file)
+const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+
+// Function to send Discord notification
+async function sendDiscordNotification(message: string) {
+  if (!DISCORD_WEBHOOK_URL) {
+    logger.warn("Discord webhook URL not set. Skipping notification.");
+    return;
+  }
+
+  try {
+    await axios.post(DISCORD_WEBHOOK_URL, {
+      content: message,
+    });
+    logger.info("Discord notification sent successfully");
+  } catch (error) {
+    logger.error("Error sending Discord notification:", error);
+  }
 }
 
 interface SpeedData {
@@ -95,8 +119,9 @@ readCSV("./data/sample.csv")
     logger.error("Error loading data:", error);
   });
 
-app.get("/api/internet-speeds", (req, res) => {
+app.get("/api/internet-speeds", async (req, res) => {
   try {
+    await sendDiscordNotification("Website requested internet speeds data");
     res.json(globalSpeedData);
   } catch (error) {
     logger.error("Error serving internet speeds:", error);
@@ -104,8 +129,9 @@ app.get("/api/internet-speeds", (req, res) => {
   }
 });
 
-app.get("/api/tiles", (req, res) => {
+app.get("/api/tiles", async (req, res) => {
   try {
+    await sendDiscordNotification("Website requested tiles data");
     const tiles = [...new Set(globalSpeedData.map((item) => item.tile))];
     res.json(tiles);
   } catch (error) {
@@ -114,9 +140,10 @@ app.get("/api/tiles", (req, res) => {
   }
 });
 
-app.get("/api/internet-speeds/:tile", (req, res) => {
+app.get("/api/internet-speeds/:tile", async (req, res) => {
   try {
     const tile = req.params.tile;
+    await sendDiscordNotification(`Website requested data for tile: ${tile}`);
     const tileData = globalSpeedData.find((item) => item.tile === tile);
     if (tileData) {
       res.json(tileData);
