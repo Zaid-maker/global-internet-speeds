@@ -41,6 +41,13 @@ const coloredFormat = winston.format.printf(({ level, message, timestamp }) => {
   return `${colors.gray(timestamp)} ${coloredLevel}: ${message}`;
 });
 
+// Custom format for production console output
+const productionFormat = winston.format.printf(
+  ({ level, message, timestamp }) => {
+    return `${timestamp} ${level}: ${message}`;
+  }
+);
+
 // Configure Winston logger
 const logger = winston.createLogger({
   level: "info",
@@ -59,8 +66,17 @@ const logger = winston.createLogger({
   ],
 });
 
-// If we're not in production, log to the console with colors
-if (process.env.NODE_ENV !== "production") {
+// Add console transport for all environments
+if (process.env.NODE_ENV === "production") {
+  logger.add(
+    new winston.transports.Console({
+      format: winston.format.combine(
+        winston.format.timestamp(),
+        productionFormat
+      ),
+    })
+  );
+} else {
   logger.add(
     new winston.transports.Console({
       format: winston.format.combine(winston.format.timestamp(), coloredFormat),
