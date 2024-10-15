@@ -48,23 +48,40 @@ if (process.env.NODE_ENV !== "production") {
   );
 }
 
-// Discord webhook URL (you should set this in your .env file)
-const DISCORD_WEBHOOK_URL = process.env.DISCORD_WEBHOOK_URL;
+// Notification configuration
+const NOTIFICATION_PROVIDER = process.env.NOTIFICATION_PROVIDER || "none";
+const NOTIFICATION_WEBHOOK_URL = process.env.NOTIFICATION_WEBHOOK_URL;
 
-// Function to send Discord notification
-async function sendDiscordNotification(message: string) {
-  if (!DISCORD_WEBHOOK_URL) {
-    logger.warn("Discord webhook URL not set. Skipping notification.");
+// Function to send notification
+async function sendNotification(message: string) {
+  if (NOTIFICATION_PROVIDER === "none" || !NOTIFICATION_WEBHOOK_URL) {
+    logger.info(
+      "Notification skipped: Provider set to none or webhook URL not provided"
+    );
     return;
   }
 
   try {
-    await axios.post(DISCORD_WEBHOOK_URL, {
-      content: message,
-    });
-    logger.info("Discord notification sent successfully");
+    let payload;
+    switch (NOTIFICATION_PROVIDER) {
+      case "discord":
+        payload = { content: message };
+        break;
+      case "slack":
+        payload = { text: message };
+        break;
+      case "generic":
+        payload = { message: message };
+        break;
+      default:
+        logger.warn(`Unknown notification provider: ${NOTIFICATION_PROVIDER}`);
+        return;
+    }
+
+    await axios.post(NOTIFICATION_WEBHOOK_URL, payload);
+    logger.info(`${NOTIFICATION_PROVIDER} notification sent successfully`);
   } catch (error) {
-    logger.error("Error sending Discord notification:", error);
+    logger.error(`Error sending ${NOTIFICATION_PROVIDER} notification:`, error);
   }
 }
 
@@ -121,7 +138,7 @@ readCSV("./data/sample.csv")
 
 app.get("/api/internet-speeds", async (req, res) => {
   try {
-    await sendDiscordNotification("Website requested internet speeds data");
+    await sendNotification("Website requested internet speeds data");
     res.json(globalSpeedData);
   } catch (error) {
     logger.error("Error serving internet speeds:", error);
@@ -131,7 +148,7 @@ app.get("/api/internet-speeds", async (req, res) => {
 
 app.get("/api/tiles", async (req, res) => {
   try {
-    await sendDiscordNotification("Website requested tiles data");
+    await sendNotification("Website requested tiles data");
     const tiles = [...new Set(globalSpeedData.map((item) => item.tile))];
     res.json(tiles);
   } catch (error) {
@@ -143,7 +160,7 @@ app.get("/api/tiles", async (req, res) => {
 app.get("/api/internet-speeds/:tile", async (req, res) => {
   try {
     const tile = req.params.tile;
-    await sendDiscordNotification(`Website requested data for tile: ${tile}`);
+    await sendNotification(`Website requested data for tile: ${tile}`);
     const tileData = globalSpeedData.find((item) => item.tile === tile);
     if (tileData) {
       res.json(tileData);
