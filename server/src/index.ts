@@ -6,6 +6,7 @@ import csv from "csv-parser";
 import winston from "winston";
 import axios from "axios";
 import dotenv from "dotenv";
+import colors from "colors/safe";
 
 dotenv.config();
 
@@ -20,6 +21,25 @@ const logsDir = path.join(__dirname, "..", "logs");
 if (!fs.existsSync(logsDir)) {
   fs.mkdirSync(logsDir);
 }
+
+// Custom format for colored console output
+const coloredFormat = winston.format.printf(({ level, message, timestamp }) => {
+  let coloredLevel;
+  switch (level) {
+    case "info":
+      coloredLevel = colors.green(level);
+      break;
+    case "warn":
+      coloredLevel = colors.yellow(level);
+      break;
+    case "error":
+      coloredLevel = colors.red(level);
+      break;
+    default:
+      coloredLevel = level;
+  }
+  return `${colors.gray(timestamp)} ${coloredLevel}: ${message}`;
+});
 
 // Configure Winston logger
 const logger = winston.createLogger({
@@ -39,11 +59,11 @@ const logger = winston.createLogger({
   ],
 });
 
-// If we're not in production, log to the console as well
+// If we're not in production, log to the console with colors
 if (process.env.NODE_ENV !== "production") {
   logger.add(
     new winston.transports.Console({
-      format: winston.format.simple(),
+      format: winston.format.combine(winston.format.timestamp(), coloredFormat),
     })
   );
 }
